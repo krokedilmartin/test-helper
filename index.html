@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Systemrapport Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2em;
+    }
+    form {
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input[type="text"],
+    input[type="file"],
+    textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+    .group {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .group h3 {
+      margin-top: 0;
+    }
+    .test-group {
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #ccc;
+    }
+    .issuesContainer input[type="text"] {
+      margin-top: 5px;
+    }
+    .addIssueBtn {
+      margin-top: 5px;
+      cursor: pointer;
+      font-size: 1.2em;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    #generatedReport {
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Systemrapport Generator</h1>
+  <form id="reportForm">
+    <!-- Filuppladdning för systemrapport -->
+    <div class="group">
+      <h3>Ladda upp systemrapport (TXT-fil)</h3>
+      <input type="file" id="systemReportFile" accept=".txt">
+    </div>
+    
+    <!-- Här kommer den dynamiskt genererade listan med installerade plugins -->
+    <div class="group" id="pluginsGroup" style="display:none;">
+      <h3>Installerade Plugins</h3>
+      <div id="pluginsContainer"></div>
+    </div>
+    
+    <!-- 5 fält för testlänkar med dynamiska issue-fält -->
+    <div class="group">
+      <h3>Länkar till tester</h3>
+      <div id="linksGroup">
+        <!-- Första testlänkgrupp -->
+        <div class="test-group">
+          <input type="text" placeholder="Testlänk 1" class="linkInput">
+          <button type="button" class="addIssueBtn">+</button>
+          <div class="issuesContainer"></div>
+        </div>
+        <!-- Andra testlänkgrupp -->
+        <div class="test-group">
+          <input type="text" placeholder="Testlänk 2" class="linkInput">
+          <button type="button" class="addIssueBtn">+</button>
+          <div class="issuesContainer"></div>
+        </div>
+        <!-- Tredje testlänkgrupp -->
+        <div class="test-group">
+          <input type="text" placeholder="Testlänk 3" class="linkInput">
+          <button type="button" class="addIssueBtn">+</button>
+          <div class="issuesContainer"></div>
+        </div>
+        <!-- Fjärde testlänkgrupp -->
+        <div class="test-group">
+          <input type="text" placeholder="Testlänk 4" class="linkInput">
+          <button type="button" class="addIssueBtn">+</button>
+          <div class="issuesContainer"></div>
+        </div>
+        <!-- Femte testlänkgrupp -->
+        <div class="test-group">
+          <input type="text" placeholder="Testlänk 5" class="linkInput">
+          <button type="button" class="addIssueBtn">+</button>
+          <div class="issuesContainer"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Checkbox för bumped on GitHub -->
+    <div class="group">
+      <label>
+        <input type="checkbox" id="githubCheckbox"> Bumped on GitHub
+      </label>
+    </div>
+    
+    <!-- Knapp för att generera rapport -->
+    <button type="button" id="generateReportBtn">Generera rapport</button>
+  </form>
+  
+  <h2>Genererad Rapport</h2>
+  <textarea id="generatedReport" rows="20" readonly></textarea>
+
+  <script>
+    // Globala variabler för att spara filinnehåll och utplockade värden
+    let fileContent = "";
+    let fileData = {
+      url: "",
+      wcVersion: "",
+      wpVersion: "",
+      phpVersion: "",
+      plugins: []
+    };
+
+    // Funktion för att parsa filens innehåll och extrahera nödvändiga värden
+    function parseFileContent(text) {
+      let result = {
+        url: "",
+        wcVersion: "",
+        wpVersion: "",
+        phpVersion: "",
+        plugins: []
+      };
+
+      // Hämta URL (första alternativ: WordPress address)
+      let urlMatch = text.match(/WordPress address \(URL\):\s*(.+)/);
+      if (urlMatch) {
+        result.url = urlMatch[1].trim();
+      } else {
+        // Fallback till Site address om WordPress address inte finns
+        let siteMatch = text.match(/Site address \(URL\):\s*(.+)/);
+        if (siteMatch) {
+          result.url = siteMatch[1].trim();
+        }
+      }
+      // Extrahera WC, WP och PHP versioner
+      let wcMatch = text.match(/WC Version:\s*(.+)/);
+      if (wcMatch) {
+        result.wcVersion = wcMatch[1].trim();
+      }
+      let wpMatch = text.match(/WP Version:\s*(.+)/);
+      if (wpMatch) {
+        result.wpVersion = wpMatch[1].trim();
+      }
+      let phpMatch = text.match(/PHP Version:\s*(.+)/);
+      if (phpMatch) {
+        result.phpVersion = phpMatch[1].trim();
+      }
+      // Extrahera plugins från avsnittet "### Active Plugins (n) ###"
+      let pluginsSection = text.match(/### Active Plugins \(\d+\) ###([\s\S]*?)(?:###|$)/);
+      if (pluginsSection) {
+        let pluginsText = pluginsSection[1].trim();
+        // Dela in i rader och filtrera bort tomma rader
+        let pluginLines = pluginsText.split("\n").map(line => line.trim()).filter(line => line !== "");
+        result.plugins = pluginLines;
+      }
+      return result;
+    }
+
+    // Lyssna på filinmatningsfältets "change"-händelse för att läsa in och parsa filen
+    document.getElementById('systemReportFile').addEventListener('change', function() {
+      if (this.files.length > 0) {
+        const file = this.files[0];
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          fileContent = event.target.result;
+          fileData = parseFileContent(fileContent);
+
+          // Uppdatera plugins-listan
+          const pluginsContainer = document.getElementById('pluginsContainer');
+          pluginsContainer.innerHTML = ""; // Rensa tidigare innehåll
+          if (fileData.plugins.length > 0) {
+            fileData.plugins.forEach((plugin, index) => {
+              const pluginDiv = document.createElement("div");
+              pluginDiv.style.marginBottom = "5px";
+              const checkbox = document.createElement("input");
+              checkbox.type = "checkbox";
+              checkbox.className = "pluginCheckbox";
+              checkbox.value = plugin; // Spara plugin-texten som värde
+              const label = document.createElement("label");
+              label.textContent = " " + plugin;
+              pluginDiv.appendChild(checkbox);
+              pluginDiv.appendChild(label);
+              pluginsContainer.appendChild(pluginDiv);
+            });
+            document.getElementById('pluginsGroup').style.display = "block";
+          } else {
+            document.getElementById('pluginsGroup').style.display = "none";
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    // Funktion för att skapa ett nytt issue-inmatningsfält
+    function addIssueField(issuesContainer) {
+      const newIssueInput = document.createElement("input");
+      newIssueInput.type = "text";
+      newIssueInput.placeholder = "Ny issue";
+      newIssueInput.className = "issueInput";
+      issuesContainer.appendChild(newIssueInput);
+    }
+
+    // Eventlyssnare för alla + knappar (för att lägga till ett issue-fält)
+    const addIssueButtons = document.querySelectorAll('.addIssueBtn');
+    addIssueButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const testGroup = this.parentElement;
+        const issuesContainer = testGroup.querySelector('.issuesContainer');
+        addIssueField(issuesContainer);
+      });
+    });
+
+    // Generera rapport vid klick på knappen "Generera rapport"
+    document.getElementById('generateReportBtn').addEventListener('click', function() {
+      function generateReport(fileText) {
+        let report = "---- Systemrapport ----\n\n";
+        // Lägg till de utplockade värdena från systemrapporten
+        report += "URL: " + (fileData.url || "[Ej tillgänglig]") + "\n";
+        report += "WC Version: " + (fileData.wcVersion || "[Ej tillgänglig]") + "\n";
+        report += "WP Version: " + (fileData.wpVersion || "[Ej tillgänglig]") + "\n";
+        report += "PHP Version: " + (fileData.phpVersion || "[Ej tillgänglig]") + "\n\n";
+
+        // Testlänkar och deras issues
+        report += "---- Länkar till tester och Issues ----\n";
+        const testGroups = document.querySelectorAll('.test-group');
+        testGroups.forEach((group, index) => {
+          const linkValue = group.querySelector('.linkInput').value.trim();
+          if (linkValue !== "") {
+            report += "\nTestlänk " + (index + 1) + ": " + linkValue + "\n";
+            const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
+            issueInputs.forEach((issue, j) => {
+              const issueText = issue.value.trim();
+              if (issueText !== "") {
+                report += "   Issue " + (j + 1) + ": " + issueText + "\n";
+              }
+            });
+          }
+        });
+
+        // GitHub-status
+        report += "\n---- GitHub Status ----\n";
+        const githubStatus = document.getElementById('githubCheckbox').checked ? "Bumped on GitHub" : "Not bumped on GitHub";
+        report += githubStatus;
+
+        // Valda plugins (de checkboxar som är ikryssade)
+        report += "\n\n---- Valda Plugins ----\n";
+        const pluginCheckboxes = document.getElementsByClassName('pluginCheckbox');
+        for (let i = 0; i < pluginCheckboxes.length; i++) {
+          if (pluginCheckboxes[i].checked) {
+            report += pluginCheckboxes[i].value + "\n";
+          }
+        }
+
+        return report;
+      }
+      
+      // Om en fil har laddats upp används dess innehåll
+      if (fileContent) {
+        const finalReport = generateReport(fileContent);
+        document.getElementById('generatedReport').value = finalReport;
+      } else {
+        // Om ingen fil laddats upp skapas en rapport utan systemdata
+        const finalReport = generateReport(null);
+        document.getElementById('generatedReport').value = finalReport;
+      }
+    });
+  </script>
+</body>
+</html>
