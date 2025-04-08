@@ -132,7 +132,6 @@
     // Save form data to localStorage
     function saveFormData() {
       const formData = {};
-      // Save test links and associated issues
       const testGroups = document.querySelectorAll('.test-group');
       formData.testLinks = [];
       testGroups.forEach(group => {
@@ -142,9 +141,7 @@
         issueInputs.forEach(issue => linkData.issues.push(issue.value));
         formData.testLinks.push(linkData);
       });
-      // Save GitHub checkbox state
       formData.github = document.getElementById('githubCheckbox').checked;
-      // Save plugins data
       formData.plugins = {};
       const pluginDivs = document.getElementById('pluginsContainer')?.children;
       if (pluginDivs) {
@@ -195,7 +192,6 @@
     }
     
     // Parse file content and extract URL, versions, and plugins.
-    // Merge plugin lines if a line does not contain a colon.
     function parseFileContent(text) {
       const result = { url: "", wcVersion: "", wpVersion: "", phpVersion: "", plugins: [] };
       let urlMatch = text.match(/WordPress address \(URL\):\s*(.+)/);
@@ -269,10 +265,8 @@
           checkbox.className = "pluginCheckbox";
           checkbox.value = plugin;
           checkbox.setAttribute("aria-label", "Select " + plugin);
-          
           const label = document.createElement("label");
           label.textContent = " " + plugin;
-          
           const branchInput = document.createElement("input");
           branchInput.type = "text";
           branchInput.placeholder = "Branch";
@@ -280,7 +274,6 @@
           branchInput.style.width = "40%";
           branchInput.value = "develop";
           branchInput.setAttribute("aria-label", "Enter branch for " + plugin);
-          
           pluginDiv.appendChild(checkbox);
           pluginDiv.appendChild(label);
           pluginDiv.appendChild(branchInput);
@@ -317,7 +310,7 @@
       if (e.dataTransfer.files.length > 0) { handleFile(e.dataTransfer.files[0]); }
     });
     
-    // Add Issue Field – set focus to newly created field
+    // Add Issue Field – set focus to new field
     function addIssueField(issuesContainer) {
       const newIssueInput = document.createElement("input");
       newIssueInput.type = "text";
@@ -334,56 +327,62 @@
       });
     });
     
-    // Generate report from form data
+    // Generate report with the updated format
     document.getElementById('generateReportBtn').addEventListener('click', function() {
       function generateReport() {
-        let report = "---- System Report ----\n\n";
-        report += "URL: " + (fileData.url || "[Not available]") + "\n";
-        report += "WC Version: " + (fileData.wcVersion || "[Not available]") + "\n";
-        report += "WP Version: " + (fileData.wpVersion || "[Not available]") + "\n";
-        report += "PHP Version: " + (fileData.phpVersion || "[Not available]") + "\n\n";
+        let report = "---- Report ----\n";
         
-        report += "---- Test Links and Issues ----\n";
-        const testGroups = document.querySelectorAll('.test-group');
-        testGroups.forEach((group, index) => {
-          const linkValue = group.querySelector('.linkInput').value.trim();
-          if (linkValue !== "") {
-            report += "\nTest link " + (index + 1) + ": " + linkValue + "\n";
-            const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
-            issueInputs.forEach((issue, j) => {
-              const issueText = issue.value.trim();
-              if (issueText !== "") {
-                report += "   Issue " + (j + 1) + ": " + issueText + "\n";
-              }
-            });
-          }
-        });
-        
-        report += "\n---- GitHub Status ----\n";
-        const githubStatus = document.getElementById('githubCheckbox').checked ? "Bumped on GitHub" : "Not bumped on GitHub";
-        report += githubStatus;
-        
-        // Gather selected plugins with branches
+        // Selected plugins with branch info
         let selectedPlugins = [];
         Array.from(document.getElementById('pluginsContainer').children).forEach(div => {
           const checkbox = div.querySelector('.pluginCheckbox');
           const branchInput = div.querySelector('.branchInput');
           if (checkbox.checked) {
-            selectedPlugins.push({ plugin: checkbox.value, branch: branchInput.value.trim() });
+            selectedPlugins.push({
+              plugin: checkbox.value,
+              branch: branchInput.value.trim()
+            });
           }
         });
+        // Sort so that plugins with "klarna" or "krokedil" come first
         selectedPlugins.sort((a, b) => {
           const regex = /(klarna|krokedil)/i;
           let aPriority = regex.test(a.plugin) ? 0 : 1;
           let bPriority = regex.test(b.plugin) ? 0 : 1;
           return aPriority === bPriority ? a.plugin.localeCompare(b.plugin) : aPriority - bPriority;
         });
-        
-        report += "\n\n---- Selected Plugins & Branches ----\n";
+        // Skriv ut varje pluginrad
         selectedPlugins.forEach(item => {
-          const branchStr = item.branch ? " (Branch: " + item.branch + ")" : "";
-          report += item.plugin + branchStr + "\n";
+          report += item.plugin + " (Branch: " + item.branch + ")\n";
         });
+        
+        // Miljödata
+        report += "URL: " + (fileData.url || "[Not available]") + "\n";
+        report += "WC Version: " + (fileData.wcVersion || "[Not available]") + "\n";
+        report += "WP Version: " + (fileData.wpVersion || "[Not available]") + "\n";
+        report += "PHP Version: " + (fileData.phpVersion || "[Not available]") + "\n\n";
+        
+        // Test links and issues
+        report += "---- Test Links and Issues ----\n\n";
+        const testGroups = document.querySelectorAll('.test-group');
+        testGroups.forEach((group, index) => {
+          const linkValue = group.querySelector('.linkInput').value.trim();
+          if (linkValue !== "") {
+            report += "Test link " + (index + 1) + ": " + linkValue + "\n";
+            const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
+            issueInputs.forEach((issue, j) => {
+              const issueText = issue.value.trim();
+              if (issueText !== "") {
+                report += "  - Issue " + (j + 1) + ": " + issueText + "\n";
+              }
+            });
+          }
+        });
+        
+        // GitHub status
+        if (document.getElementById('githubCheckbox').checked) {
+          report += "\nBumped on GitHub";
+        }
         return report;
       }
       
@@ -403,16 +402,14 @@
       });
     });
     
-    // Remove Data – clear saved data and reset the form
+    // Remove Data – clear saved data and reset form
     document.getElementById('removeDataBtn').addEventListener('click', function() {
       if (confirm("Are you sure you want to remove the saved data?")) {
         localStorage.removeItem("formData");
-        // Optionally, reset the form and clear dynamic fields
         document.getElementById('reportForm').reset();
         document.getElementById('generatedReport').value = "";
         document.getElementById('pluginsContainer').innerHTML = "";
         document.getElementById('pluginsGroup').style.display = "none";
-        // Clear dynamic issue fields
         document.querySelectorAll('.issuesContainer').forEach(container => container.innerHTML = "");
         alert("Saved data removed.");
       }
