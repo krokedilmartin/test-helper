@@ -1,31 +1,23 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Systemrapport Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>System Report Generator</title>
+  <!-- Bootstrap CSS via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    /* Basstilar utan extra wrappers */
-    body {
-      font-family: Arial, sans-serif;
-      margin: 2em;
+    /* Custom styles for drop zone and dynamic elements */
+    #dropZone {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 10px;
     }
-    h1, h2, h3 {
-      margin-top: 0;
+    #dropZone.hover {
+      background-color: #f0f0f0;
     }
-    input[type="text"],
-    input[type="file"],
-    textarea {
-      width: 100%;
-      padding: 6px;
-      margin-top: 4px;
-      box-sizing: border-box;
-    }
-    .group {
-      border: 1px solid #ccc;
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-    /* Stil för testlänkgrupper med dynamiska issue-fält */
     .test-group {
       margin-bottom: 15px;
       padding-bottom: 10px;
@@ -34,12 +26,7 @@
     .issuesContainer input[type="text"] {
       margin-top: 5px;
     }
-    .addIssueBtn {
-      margin-top: 5px;
-      cursor: pointer;
-      font-size: 1.2em;
-    }
-    /* Stil för installerade plugins – varje plugin visas med en checkbox och ett branch-inputfält */
+    /* Adjust installed plugins input appearance */
     #pluginsContainer div {
       margin-bottom: 10px;
     }
@@ -48,79 +35,91 @@
       margin-left: 10px;
       display: inline-block;
     }
-    button {
-      padding: 10px 20px;
-      font-size: 1em;
-      cursor: pointer;
-    }
-    #generatedReport {
-      white-space: pre-wrap;
-    }
   </style>
 </head>
 <body>
-  <h1>Systemrapport Generator</h1>
-  <form id="reportForm">
-    <!-- Ladda upp systemrapport (TXT-fil) -->
-    <div class="group">
-      <h3>Ladda upp systemrapport (TXT-fil)</h3>
-      <input type="file" id="systemReportFile" accept=".txt">
-    </div>
+  <div class="container my-4">
+    <h1 class="mb-4">System Report Generator</h1>
     
-    <!-- Installerade plugins (genereras dynamiskt utifrån filen) -->
-    <div class="group" id="pluginsGroup" style="display:none;">
-      <h3>Installerade Plugins</h3>
-      <div id="pluginsContainer"></div>
-    </div>
-    
-    <!-- 5 fält för länkar till tester med dynamiska issue-fält -->
-    <div class="group">
-      <h3>Länkar till tester</h3>
-      <div id="linksGroup">
-        <div class="test-group">
-          <input type="text" placeholder="Testlänk 1" class="linkInput">
-          <button type="button" class="addIssueBtn">+</button>
-          <div class="issuesContainer"></div>
+    <!-- Form -->
+    <form id="reportForm">
+      <!-- File Upload with Drag & Drop -->
+      <div class="mb-3">
+        <h3>Upload system report (TXT file)</h3>
+        <div id="dropZone" tabindex="0" aria-label="Drag and drop your TXT file here or click to upload">
+          Drag and drop your TXT file here or click to upload.
         </div>
-        <div class="test-group">
-          <input type="text" placeholder="Testlänk 2" class="linkInput">
-          <button type="button" class="addIssueBtn">+</button>
-          <div class="issuesContainer"></div>
-        </div>
-        <div class="test-group">
-          <input type="text" placeholder="Testlänk 3" class="linkInput">
-          <button type="button" class="addIssueBtn">+</button>
-          <div class="issuesContainer"></div>
-        </div>
-        <div class="test-group">
-          <input type="text" placeholder="Testlänk 4" class="linkInput">
-          <button type="button" class="addIssueBtn">+</button>
-          <div class="issuesContainer"></div>
-        </div>
-        <div class="test-group">
-          <input type="text" placeholder="Testlänk 5" class="linkInput">
-          <button type="button" class="addIssueBtn">+</button>
-          <div class="issuesContainer"></div>
+        <!-- Hidden file input -->
+        <input type="file" id="systemReportFile" accept=".txt" class="d-none" aria-label="Choose TXT file">
+        <!-- Error message -->
+        <div id="errorMsg" class="alert alert-danger d-none" role="alert"></div>
+      </div>
+      
+      <!-- Installed Plugins (populated from file) -->
+      <div class="mb-3" id="pluginsGroup" style="display:none;">
+        <h3>Installed Plugins</h3>
+        <div id="pluginsContainer"></div>
+      </div>
+      
+      <!-- Test Links with dynamic Issue fields -->
+      <div class="mb-3">
+        <h3>Test Links</h3>
+        <div id="linksGroup">
+          <!-- 5 static test groups -->
+          <div class="test-group">
+            <input type="text" placeholder="Test link 1" class="form-control linkInput" aria-label="Test link 1">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <div class="issuesContainer"></div>
+          </div>
+          <div class="test-group">
+            <input type="text" placeholder="Test link 2" class="form-control linkInput" aria-label="Test link 2">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <div class="issuesContainer"></div>
+          </div>
+          <div class="test-group">
+            <input type="text" placeholder="Test link 3" class="form-control linkInput" aria-label="Test link 3">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <div class="issuesContainer"></div>
+          </div>
+          <div class="test-group">
+            <input type="text" placeholder="Test link 4" class="form-control linkInput" aria-label="Test link 4">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <div class="issuesContainer"></div>
+          </div>
+          <div class="test-group">
+            <input type="text" placeholder="Test link 5" class="form-control linkInput" aria-label="Test link 5">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <div class="issuesContainer"></div>
+          </div>
         </div>
       </div>
-    </div>
+      
+      <!-- GitHub Status -->
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="githubCheckbox" aria-label="Bumped on GitHub">
+        <label class="form-check-label" for="githubCheckbox">Bumped on GitHub</label>
+      </div>
+      
+      <!-- Buttons: Generate Report, Copy to Clipboard, Remove Data -->
+      <div class="mb-3">
+        <button type="button" class="btn btn-primary me-2" id="generateReportBtn" aria-label="Generate report">Generate Report</button>
+        <button type="button" class="btn btn-outline-secondary me-2" id="copyToClipboardBtn" aria-label="Copy report to clipboard">Copy to Clipboard</button>
+        <button type="button" class="btn btn-danger" id="removeDataBtn" aria-label="Remove saved data">Remove Data</button>
+      </div>
+    </form>
     
-    <!-- Checkbox för GitHub-status -->
-    <div class="group">
-      <label>
-        <input type="checkbox" id="githubCheckbox"> Bumped on GitHub
-      </label>
+    <!-- Generated Report -->
+    <div class="mb-3">
+      <h2>Generated Report</h2>
+      <textarea id="generatedReport" class="form-control" rows="15" readonly aria-label="Generated report"></textarea>
     </div>
-    
-    <!-- Knapp för att generera rapporten -->
-    <button type="button" id="generateReportBtn">Generera rapport</button>
-  </form>
+  </div>
   
-  <h2>Genererad Rapport</h2>
-  <textarea id="generatedReport" rows="20" readonly></textarea>
-
+  <!-- Bootstrap Bundle with Popper via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
   <script>
-    // Globala variabler
+    // Global variables to hold file content and extracted data
     let fileContent = "";
     let fileData = {
       url: "",
@@ -129,160 +128,230 @@
       phpVersion: "",
       plugins: []
     };
-
-    // Parsar filinnehållet och extraherar URL, WC-, WP- & PHP-versioner samt plugins.
-    // Vid pluginparsing slås rader ihop om en rad inte innehåller kolon.
-    function parseFileContent(text) {
-      let result = {
-        url: "",
-        wcVersion: "",
-        wpVersion: "",
-        phpVersion: "",
-        plugins: []
-      };
-
-      // Extrahera URL från "WordPress address (URL):" eller "Site address (URL):"
-      let urlMatch = text.match(/WordPress address \(URL\):\s*(.+)/);
-      if (urlMatch) {
-        result.url = urlMatch[1].trim();
-      } else {
-        let siteMatch = text.match(/Site address \(URL\):\s*(.+)/);
-        if (siteMatch) {
-          result.url = siteMatch[1].trim();
+    
+    // Save form data to localStorage
+    function saveFormData() {
+      const formData = {};
+      // Save test links and associated issues
+      const testGroups = document.querySelectorAll('.test-group');
+      formData.testLinks = [];
+      testGroups.forEach(group => {
+        const linkInput = group.querySelector('.linkInput');
+        let linkData = { link: linkInput.value, issues: [] };
+        const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
+        issueInputs.forEach(issue => linkData.issues.push(issue.value));
+        formData.testLinks.push(linkData);
+      });
+      // Save GitHub checkbox state
+      formData.github = document.getElementById('githubCheckbox').checked;
+      // Save plugins data
+      formData.plugins = {};
+      const pluginDivs = document.getElementById('pluginsContainer')?.children;
+      if (pluginDivs) {
+        Array.from(pluginDivs).forEach(div => {
+          const checkbox = div.querySelector('.pluginCheckbox');
+          const branchInput = div.querySelector('.branchInput');
+          formData.plugins[checkbox.value] = { checked: checkbox.checked, branch: branchInput.value };
+        });
+      }
+      localStorage.setItem("formData", JSON.stringify(formData));
+    }
+    
+    // Load form data from localStorage
+    function loadFormData() {
+      const savedData = localStorage.getItem("formData");
+      if (!savedData) return;
+      try {
+        const formData = JSON.parse(savedData);
+        if (formData.testLinks && Array.isArray(formData.testLinks)) {
+          const testGroups = document.querySelectorAll('.test-group');
+          formData.testLinks.forEach((item, index) => {
+            if (testGroups[index]) {
+              testGroups[index].querySelector('.linkInput').value = item.link || "";
+              const issuesContainer = testGroups[index].querySelector('.issuesContainer');
+              issuesContainer.innerHTML = "";
+              if (item.issues && Array.isArray(item.issues)) {
+                item.issues.forEach(issueValue => {
+                  const newInput = document.createElement("input");
+                  newInput.type = "text";
+                  newInput.placeholder = "New issue";
+                  newInput.className = "form-control mt-1 issueInput";
+                  newInput.value = issueValue;
+                  issuesContainer.appendChild(newInput);
+                });
+              }
+            }
+          });
         }
+        if (typeof formData.github === "boolean") {
+          document.getElementById('githubCheckbox').checked = formData.github;
+        }
+        if (formData.plugins) {
+          window.savedPluginsData = formData.plugins;
+        }
+      } catch (e) {
+        console.error("Error parsing saved form data:", e);
       }
-      // Extrahera WC-version
-      let wcMatch = text.match(/WC Version:\s*(.+)/);
-      if (wcMatch) {
-        result.wcVersion = wcMatch[1].trim();
+    }
+    
+    // Parse file content and extract URL, versions, and plugins.
+    // Merge plugin lines if a line does not contain a colon.
+    function parseFileContent(text) {
+      const result = { url: "", wcVersion: "", wpVersion: "", phpVersion: "", plugins: [] };
+      let urlMatch = text.match(/WordPress address \(URL\):\s*(.+)/);
+      if (urlMatch) { result.url = urlMatch[1].trim(); }
+      else {
+        const siteMatch = text.match(/Site address \(URL\):\s*(.+)/);
+        if (siteMatch) { result.url = siteMatch[1].trim(); }
       }
-      // Extrahera WP-version
-      let wpMatch = text.match(/WP Version:\s*(.+)/);
-      if (wpMatch) {
-        result.wpVersion = wpMatch[1].trim();
-      }
-      // Extrahera PHP-version
-      let phpMatch = text.match(/PHP Version:\s*(.+)/);
-      if (phpMatch) {
-        result.phpVersion = phpMatch[1].trim();
-      }
-      // Extrahera plugins från avsnittet "### Active Plugins (n) ###"
-      let pluginsSection = text.match(/### Active Plugins \(\d+\) ###([\s\S]*?)(?:###|$)/);
+      const wcMatch = text.match(/WC Version:\s*(.+)/);
+      if (wcMatch) { result.wcVersion = wcMatch[1].trim(); }
+      const wpMatch = text.match(/WP Version:\s*(.+)/);
+      if (wpMatch) { result.wpVersion = wpMatch[1].trim(); }
+      const phpMatch = text.match(/PHP Version:\s*(.+)/);
+      if (phpMatch) { result.phpVersion = phpMatch[1].trim(); }
+      const pluginsSection = text.match(/### Active Plugins \(\d+\) ###([\s\S]*?)(?:###|$)/);
       if (pluginsSection) {
-        let pluginsText = pluginsSection[1].trim();
-        // Dela upp i rader, rensa bort tomma rader
-        let rawLines = pluginsText.split("\n").map(line => line.trim()).filter(line => line !== "");
-        // Om en rad inte innehåller kolon adderas den till föregående rad.
-        let pluginLines = [];
+        const rawLines = pluginsSection[1].trim().split("\n").map(line => line.trim()).filter(line => line !== "");
+        const pluginLines = [];
         rawLines.forEach(line => {
-          if (!line.includes(":") && pluginLines.length > 0) {
+          if (!line.includes(":") && pluginLines.length > 0)
             pluginLines[pluginLines.length - 1] += " " + line;
-          } else {
+          else
             pluginLines.push(line);
-          }
         });
         result.plugins = pluginLines;
       }
       return result;
     }
-
-    // Lyssnar på filuppladdning, läser in filen och uppdaterar plugins-delen
-    document.getElementById('systemReportFile').addEventListener('change', function() {
-      if (this.files.length > 0) {
-        const file = this.files[0];
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          fileContent = event.target.result;
-          fileData = parseFileContent(fileContent);
-          
-          // Sortera plugins så att de innehållande "klarna" eller "krokedil" kommer först.
-          fileData.plugins.sort((a, b) => {
-            const regex = /(klarna|krokedil)/i;
-            let aMatch = regex.test(a) ? 0 : 1;
-            let bMatch = regex.test(b) ? 0 : 1;
-            if (aMatch === bMatch) {
-              return a.localeCompare(b);
-            }
-            return aMatch - bMatch;
-          });
-
-          // Uppdatera plugins-listan
-          const pluginsContainer = document.getElementById('pluginsContainer');
-          pluginsContainer.innerHTML = "";
-          if (fileData.plugins.length > 0) {
-            fileData.plugins.forEach((plugin) => {
-              let pluginDiv = document.createElement("div");
-              
-              // Checkbox för plugin
-              let checkbox = document.createElement("input");
-              checkbox.type = "checkbox";
-              checkbox.className = "pluginCheckbox";
-              checkbox.value = plugin;
-              
-              // Label med plugintext
-              let label = document.createElement("label");
-              label.textContent = " " + plugin;
-              
-              // Input-fält för branch, förinställt med "develop"
-              let branchInput = document.createElement("input");
-              branchInput.type = "text";
-              branchInput.placeholder = "Branch";
-              branchInput.className = "branchInput";
-              branchInput.value = "develop";
-              
-              pluginDiv.appendChild(checkbox);
-              pluginDiv.appendChild(label);
-              pluginDiv.appendChild(branchInput);
-              
-              pluginsContainer.appendChild(pluginDiv);
-            });
-            document.getElementById('pluginsGroup').style.display = "block";
-          } else {
-            document.getElementById('pluginsGroup').style.display = "none";
-          }
-        };
-        reader.readAsText(file);
-      }
-    });
-
-    // Skapar ett nytt issue-fält i en angiven container
-    function addIssueField(issuesContainer) {
-      let newIssueInput = document.createElement("input");
-      newIssueInput.type = "text";
-      newIssueInput.placeholder = "Ny issue";
-      newIssueInput.className = "issueInput";
-      issuesContainer.appendChild(newIssueInput);
+    
+    // Show and clear error messages
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('d-none');
     }
-
-    // Lägg till eventlyssnare på + knappar för testlänkssektionen
-    const addIssueButtons = document.querySelectorAll('.addIssueBtn');
-    addIssueButtons.forEach(button => {
+    function clearError() {
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = "";
+      errorDiv.classList.add('d-none');
+    }
+    
+    // Handle selected file – validate type and parse content
+    function handleFile(file) {
+      if (!file.name.toLowerCase().endsWith('.txt')) {
+        showError("Invalid file type. Please upload a .txt file.");
+        return;
+      }
+      clearError();
+      const reader = new FileReader();
+      reader.onerror = function() { showError("Failed to read file."); };
+      reader.onload = function(event) {
+        fileContent = event.target.result;
+        fileData = parseFileContent(fileContent);
+        if (!fileData.url || !fileData.wcVersion || !fileData.wpVersion || !fileData.phpVersion) {
+          showError("Missing required data in the file (URL, WC Version, WP Version, or PHP Version).");
+          return;
+        }
+        clearError();
+        fileData.plugins.sort((a, b) => {
+          const regex = /(klarna|krokedil)/i;
+          let aPriority = regex.test(a) ? 0 : 1;
+          let bPriority = regex.test(b) ? 0 : 1;
+          return aPriority === bPriority ? a.localeCompare(b) : aPriority - bPriority;
+        });
+        const pluginsContainer = document.getElementById('pluginsContainer');
+        pluginsContainer.innerHTML = "";
+        fileData.plugins.forEach(plugin => {
+          const pluginDiv = document.createElement("div");
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "pluginCheckbox";
+          checkbox.value = plugin;
+          checkbox.setAttribute("aria-label", "Select " + plugin);
+          
+          const label = document.createElement("label");
+          label.textContent = " " + plugin;
+          
+          const branchInput = document.createElement("input");
+          branchInput.type = "text";
+          branchInput.placeholder = "Branch";
+          branchInput.className = "branchInput form-control d-inline-block";
+          branchInput.style.width = "40%";
+          branchInput.value = "develop";
+          branchInput.setAttribute("aria-label", "Enter branch for " + plugin);
+          
+          pluginDiv.appendChild(checkbox);
+          pluginDiv.appendChild(label);
+          pluginDiv.appendChild(branchInput);
+          pluginsContainer.appendChild(pluginDiv);
+        });
+        document.getElementById('pluginsGroup').style.display = fileData.plugins.length > 0 ? "block" : "none";
+        if (window.savedPluginsData) {
+          Array.from(pluginsContainer.children).forEach(div => {
+            const checkbox = div.querySelector('.pluginCheckbox');
+            const branchInput = div.querySelector('.branchInput');
+            if (window.savedPluginsData[checkbox.value]) {
+              checkbox.checked = window.savedPluginsData[checkbox.value].checked;
+              branchInput.value = window.savedPluginsData[checkbox.value].branch;
+            }
+          });
+        }
+        loadFormData();
+      };
+      reader.readAsText(file);
+    }
+    
+    document.getElementById('systemReportFile').addEventListener('change', function() {
+      if (this.files.length > 0) { handleFile(this.files[0]); }
+    });
+    
+    // Drag & Drop functionality
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('click', () => document.getElementById('systemReportFile').click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('hover'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('hover'); });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('hover');
+      if (e.dataTransfer.files.length > 0) { handleFile(e.dataTransfer.files[0]); }
+    });
+    
+    // Add Issue Field – set focus to newly created field
+    function addIssueField(issuesContainer) {
+      const newIssueInput = document.createElement("input");
+      newIssueInput.type = "text";
+      newIssueInput.placeholder = "New issue";
+      newIssueInput.className = "form-control mt-1 issueInput";
+      issuesContainer.appendChild(newIssueInput);
+      newIssueInput.focus();
+    }
+    document.querySelectorAll('.addIssueBtn').forEach(button => {
       button.addEventListener('click', function() {
-        let testGroup = this.parentElement;
-        let issuesContainer = testGroup.querySelector('.issuesContainer');
+        const testGroup = this.parentElement;
+        const issuesContainer = testGroup.querySelector('.issuesContainer');
         addIssueField(issuesContainer);
       });
     });
-
-    // Generera rapporten med alla uppgifter
+    
+    // Generate report from form data
     document.getElementById('generateReportBtn').addEventListener('click', function() {
       function generateReport() {
-        let report = "---- Systemrapport ----\n\n";
-        report += "URL: " + (fileData.url || "[Ej tillgänglig]") + "\n";
-        report += "WC Version: " + (fileData.wcVersion || "[Ej tillgänglig]") + "\n";
-        report += "WP Version: " + (fileData.wpVersion || "[Ej tillgänglig]") + "\n";
-        report += "PHP Version: " + (fileData.phpVersion || "[Ej tillgänglig]") + "\n\n";
+        let report = "---- System Report ----\n\n";
+        report += "URL: " + (fileData.url || "[Not available]") + "\n";
+        report += "WC Version: " + (fileData.wcVersion || "[Not available]") + "\n";
+        report += "WP Version: " + (fileData.wpVersion || "[Not available]") + "\n";
+        report += "PHP Version: " + (fileData.phpVersion || "[Not available]") + "\n\n";
         
-        // Testlänkar och deras issues
-        report += "---- Länkar till tester och Issues ----\n";
+        report += "---- Test Links and Issues ----\n";
         const testGroups = document.querySelectorAll('.test-group');
         testGroups.forEach((group, index) => {
-          let linkValue = group.querySelector('.linkInput').value.trim();
+          const linkValue = group.querySelector('.linkInput').value.trim();
           if (linkValue !== "") {
-            report += "\nTestlänk " + (index + 1) + ": " + linkValue + "\n";
+            report += "\nTest link " + (index + 1) + ": " + linkValue + "\n";
             const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
             issueInputs.forEach((issue, j) => {
-              let issueText = issue.value.trim();
+              const issueText = issue.value.trim();
               if (issueText !== "") {
                 report += "   Issue " + (j + 1) + ": " + issueText + "\n";
               }
@@ -291,45 +360,69 @@
         });
         
         report += "\n---- GitHub Status ----\n";
-        let githubStatus = document.getElementById('githubCheckbox').checked ? "Bumped on GitHub" : "Not bumped on GitHub";
+        const githubStatus = document.getElementById('githubCheckbox').checked ? "Bumped on GitHub" : "Not bumped on GitHub";
         report += githubStatus;
         
-        // Samla och sortera utvalda plugins med branch
+        // Gather selected plugins with branches
         let selectedPlugins = [];
-        const pluginDivs = document.getElementById('pluginsContainer').children;
-        Array.from(pluginDivs).forEach(div => {
-          let checkbox = div.querySelector('.pluginCheckbox');
-          let branchInput = div.querySelector('.branchInput');
+        Array.from(document.getElementById('pluginsContainer').children).forEach(div => {
+          const checkbox = div.querySelector('.pluginCheckbox');
+          const branchInput = div.querySelector('.branchInput');
           if (checkbox.checked) {
-            selectedPlugins.push({
-              plugin: checkbox.value,
-              branch: branchInput.value.trim()
-            });
+            selectedPlugins.push({ plugin: checkbox.value, branch: branchInput.value.trim() });
           }
         });
-        // Sortera så att plugins med "klarna" eller "krokedil" kommer först.
         selectedPlugins.sort((a, b) => {
           const regex = /(klarna|krokedil)/i;
           let aPriority = regex.test(a.plugin) ? 0 : 1;
           let bPriority = regex.test(b.plugin) ? 0 : 1;
-          if(aPriority === bPriority){
-            return a.plugin.localeCompare(b.plugin);
-          }
-          return aPriority - bPriority;
+          return aPriority === bPriority ? a.plugin.localeCompare(b.plugin) : aPriority - bPriority;
         });
         
-        report += "\n\n---- Valda Plugins & Branches ----\n";
+        report += "\n\n---- Selected Plugins & Branches ----\n";
         selectedPlugins.forEach(item => {
-          let branchStr = item.branch ? " (Branch: " + item.branch + ")" : "";
+          const branchStr = item.branch ? " (Branch: " + item.branch + ")" : "";
           report += item.plugin + branchStr + "\n";
         });
-        
         return report;
       }
       
-      let finalReport = generateReport();
+      const finalReport = generateReport();
       document.getElementById('generatedReport').value = finalReport;
+      saveFormData();
     });
+    
+    // Copy report to clipboard
+    document.getElementById('copyToClipboardBtn').addEventListener('click', function() {
+      const reportText = document.getElementById('generatedReport').value;
+      if (!reportText) return;
+      navigator.clipboard.writeText(reportText).then(() => {
+        alert("Report copied to clipboard!");
+      }).catch(err => {
+        alert("Failed to copy report: " + err);
+      });
+    });
+    
+    // Remove Data – clear saved data and reset the form
+    document.getElementById('removeDataBtn').addEventListener('click', function() {
+      if (confirm("Are you sure you want to remove the saved data?")) {
+        localStorage.removeItem("formData");
+        // Optionally, reset the form and clear dynamic fields
+        document.getElementById('reportForm').reset();
+        document.getElementById('generatedReport').value = "";
+        document.getElementById('pluginsContainer').innerHTML = "";
+        document.getElementById('pluginsGroup').style.display = "none";
+        // Clear dynamic issue fields
+        document.querySelectorAll('.issuesContainer').forEach(container => container.innerHTML = "");
+        alert("Saved data removed.");
+      }
+    });
+    
+    // Save form data on any change in the form
+    document.getElementById('reportForm').addEventListener('change', saveFormData);
+    
+    // Load saved form data on page load
+    window.addEventListener('load', loadFormData);
   </script>
 </body>
 </html>
