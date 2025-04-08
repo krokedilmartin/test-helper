@@ -4,24 +4,20 @@
   <meta charset="UTF-8">
   <title>Systemrapport Generator</title>
   <style>
+    /* Basstilar utan extra wrappers */
     body {
       font-family: Arial, sans-serif;
       margin: 2em;
     }
-    form {
-      max-width: 600px;
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
+    h1, h2, h3 {
+      margin-top: 0;
     }
     input[type="text"],
     input[type="file"],
     textarea {
       width: 100%;
-      padding: 8px;
-      margin-top: 5px;
+      padding: 6px;
+      margin-top: 4px;
       box-sizing: border-box;
     }
     .group {
@@ -29,9 +25,7 @@
       padding: 15px;
       margin-bottom: 20px;
     }
-    .group h3 {
-      margin-top: 0;
-    }
+    /* Stil för testlänkgrupper med dynamiska issue-fält */
     .test-group {
       margin-bottom: 15px;
       padding-bottom: 10px;
@@ -44,6 +38,15 @@
       margin-top: 5px;
       cursor: pointer;
       font-size: 1.2em;
+    }
+    /* Stil för installerade plugins – varje plugin visas med en checkbox och ett branch-inputfält */
+    #pluginsContainer div {
+      margin-bottom: 10px;
+    }
+    #pluginsContainer input[type="text"] {
+      width: 40%;
+      margin-left: 10px;
+      display: inline-block;
     }
     button {
       padding: 10px 20px;
@@ -58,47 +61,42 @@
 <body>
   <h1>Systemrapport Generator</h1>
   <form id="reportForm">
-    <!-- Filuppladdning för systemrapport -->
+    <!-- Ladda upp systemrapport (TXT-fil) -->
     <div class="group">
       <h3>Ladda upp systemrapport (TXT-fil)</h3>
       <input type="file" id="systemReportFile" accept=".txt">
     </div>
     
-    <!-- Här kommer den dynamiskt genererade listan med installerade plugins -->
+    <!-- Installerade plugins (genereras dynamiskt utifrån filen) -->
     <div class="group" id="pluginsGroup" style="display:none;">
       <h3>Installerade Plugins</h3>
       <div id="pluginsContainer"></div>
     </div>
     
-    <!-- 5 fält för testlänkar med dynamiska issue-fält -->
+    <!-- 5 fält för länkar till tester med dynamiska issue-fält -->
     <div class="group">
       <h3>Länkar till tester</h3>
       <div id="linksGroup">
-        <!-- Första testlänkgrupp -->
         <div class="test-group">
           <input type="text" placeholder="Testlänk 1" class="linkInput">
           <button type="button" class="addIssueBtn">+</button>
           <div class="issuesContainer"></div>
         </div>
-        <!-- Andra testlänkgrupp -->
         <div class="test-group">
           <input type="text" placeholder="Testlänk 2" class="linkInput">
           <button type="button" class="addIssueBtn">+</button>
           <div class="issuesContainer"></div>
         </div>
-        <!-- Tredje testlänkgrupp -->
         <div class="test-group">
           <input type="text" placeholder="Testlänk 3" class="linkInput">
           <button type="button" class="addIssueBtn">+</button>
           <div class="issuesContainer"></div>
         </div>
-        <!-- Fjärde testlänkgrupp -->
         <div class="test-group">
           <input type="text" placeholder="Testlänk 4" class="linkInput">
           <button type="button" class="addIssueBtn">+</button>
           <div class="issuesContainer"></div>
         </div>
-        <!-- Femte testlänkgrupp -->
         <div class="test-group">
           <input type="text" placeholder="Testlänk 5" class="linkInput">
           <button type="button" class="addIssueBtn">+</button>
@@ -107,14 +105,14 @@
       </div>
     </div>
     
-    <!-- Checkbox för bumped on GitHub -->
+    <!-- Checkbox för GitHub-status -->
     <div class="group">
       <label>
         <input type="checkbox" id="githubCheckbox"> Bumped on GitHub
       </label>
     </div>
     
-    <!-- Knapp för att generera rapport -->
+    <!-- Knapp för att generera rapporten -->
     <button type="button" id="generateReportBtn">Generera rapport</button>
   </form>
   
@@ -122,7 +120,7 @@
   <textarea id="generatedReport" rows="20" readonly></textarea>
 
   <script>
-    // Globala variabler för att spara filinnehåll och utplockade värden
+    // Globala variabler
     let fileContent = "";
     let fileData = {
       url: "",
@@ -132,7 +130,8 @@
       plugins: []
     };
 
-    // Funktion för att parsa filens innehåll och extrahera nödvändiga värden
+    // Parsar filinnehållet och extraherar URL, WC-, WP- & PHP-versioner samt plugins.
+    // Vid pluginparsing slås rader ihop om en rad inte innehåller kolon.
     function parseFileContent(text) {
       let result = {
         url: "",
@@ -142,26 +141,27 @@
         plugins: []
       };
 
-      // Hämta URL (första alternativ: WordPress address)
+      // Extrahera URL från "WordPress address (URL):" eller "Site address (URL):"
       let urlMatch = text.match(/WordPress address \(URL\):\s*(.+)/);
       if (urlMatch) {
         result.url = urlMatch[1].trim();
       } else {
-        // Fallback till Site address om WordPress address inte finns
         let siteMatch = text.match(/Site address \(URL\):\s*(.+)/);
         if (siteMatch) {
           result.url = siteMatch[1].trim();
         }
       }
-      // Extrahera WC, WP och PHP versioner
+      // Extrahera WC-version
       let wcMatch = text.match(/WC Version:\s*(.+)/);
       if (wcMatch) {
         result.wcVersion = wcMatch[1].trim();
       }
+      // Extrahera WP-version
       let wpMatch = text.match(/WP Version:\s*(.+)/);
       if (wpMatch) {
         result.wpVersion = wpMatch[1].trim();
       }
+      // Extrahera PHP-version
       let phpMatch = text.match(/PHP Version:\s*(.+)/);
       if (phpMatch) {
         result.phpVersion = phpMatch[1].trim();
@@ -170,14 +170,23 @@
       let pluginsSection = text.match(/### Active Plugins \(\d+\) ###([\s\S]*?)(?:###|$)/);
       if (pluginsSection) {
         let pluginsText = pluginsSection[1].trim();
-        // Dela in i rader och filtrera bort tomma rader
-        let pluginLines = pluginsText.split("\n").map(line => line.trim()).filter(line => line !== "");
+        // Dela upp i rader, rensa bort tomma rader
+        let rawLines = pluginsText.split("\n").map(line => line.trim()).filter(line => line !== "");
+        // Om en rad inte innehåller kolon adderas den till föregående rad.
+        let pluginLines = [];
+        rawLines.forEach(line => {
+          if (!line.includes(":") && pluginLines.length > 0) {
+            pluginLines[pluginLines.length - 1] += " " + line;
+          } else {
+            pluginLines.push(line);
+          }
+        });
         result.plugins = pluginLines;
       }
       return result;
     }
 
-    // Lyssna på filinmatningsfältets "change"-händelse för att läsa in och parsa filen
+    // Lyssnar på filuppladdning, läser in filen och uppdaterar plugins-delen
     document.getElementById('systemReportFile').addEventListener('change', function() {
       if (this.files.length > 0) {
         const file = this.files[0];
@@ -185,22 +194,46 @@
         reader.onload = function(event) {
           fileContent = event.target.result;
           fileData = parseFileContent(fileContent);
+          
+          // Sortera plugins så att de innehållande "klarna" eller "krokedil" kommer först.
+          fileData.plugins.sort((a, b) => {
+            const regex = /(klarna|krokedil)/i;
+            let aMatch = regex.test(a) ? 0 : 1;
+            let bMatch = regex.test(b) ? 0 : 1;
+            if (aMatch === bMatch) {
+              return a.localeCompare(b);
+            }
+            return aMatch - bMatch;
+          });
 
           // Uppdatera plugins-listan
           const pluginsContainer = document.getElementById('pluginsContainer');
-          pluginsContainer.innerHTML = ""; // Rensa tidigare innehåll
+          pluginsContainer.innerHTML = "";
           if (fileData.plugins.length > 0) {
-            fileData.plugins.forEach((plugin, index) => {
-              const pluginDiv = document.createElement("div");
-              pluginDiv.style.marginBottom = "5px";
-              const checkbox = document.createElement("input");
+            fileData.plugins.forEach((plugin) => {
+              let pluginDiv = document.createElement("div");
+              
+              // Checkbox för plugin
+              let checkbox = document.createElement("input");
               checkbox.type = "checkbox";
               checkbox.className = "pluginCheckbox";
-              checkbox.value = plugin; // Spara plugin-texten som värde
-              const label = document.createElement("label");
+              checkbox.value = plugin;
+              
+              // Label med plugintext
+              let label = document.createElement("label");
               label.textContent = " " + plugin;
+              
+              // Input-fält för branch, förinställt med "develop"
+              let branchInput = document.createElement("input");
+              branchInput.type = "text";
+              branchInput.placeholder = "Branch";
+              branchInput.className = "branchInput";
+              branchInput.value = "develop";
+              
               pluginDiv.appendChild(checkbox);
               pluginDiv.appendChild(label);
+              pluginDiv.appendChild(branchInput);
+              
               pluginsContainer.appendChild(pluginDiv);
             });
             document.getElementById('pluginsGroup').style.display = "block";
@@ -212,78 +245,90 @@
       }
     });
 
-    // Funktion för att skapa ett nytt issue-inmatningsfält
+    // Skapar ett nytt issue-fält i en angiven container
     function addIssueField(issuesContainer) {
-      const newIssueInput = document.createElement("input");
+      let newIssueInput = document.createElement("input");
       newIssueInput.type = "text";
       newIssueInput.placeholder = "Ny issue";
       newIssueInput.className = "issueInput";
       issuesContainer.appendChild(newIssueInput);
     }
 
-    // Eventlyssnare för alla + knappar (för att lägga till ett issue-fält)
+    // Lägg till eventlyssnare på + knappar för testlänkssektionen
     const addIssueButtons = document.querySelectorAll('.addIssueBtn');
     addIssueButtons.forEach(button => {
       button.addEventListener('click', function() {
-        const testGroup = this.parentElement;
-        const issuesContainer = testGroup.querySelector('.issuesContainer');
+        let testGroup = this.parentElement;
+        let issuesContainer = testGroup.querySelector('.issuesContainer');
         addIssueField(issuesContainer);
       });
     });
 
-    // Generera rapport vid klick på knappen "Generera rapport"
+    // Generera rapporten med alla uppgifter
     document.getElementById('generateReportBtn').addEventListener('click', function() {
-      function generateReport(fileText) {
+      function generateReport() {
         let report = "---- Systemrapport ----\n\n";
-        // Lägg till de utplockade värdena från systemrapporten
         report += "URL: " + (fileData.url || "[Ej tillgänglig]") + "\n";
         report += "WC Version: " + (fileData.wcVersion || "[Ej tillgänglig]") + "\n";
         report += "WP Version: " + (fileData.wpVersion || "[Ej tillgänglig]") + "\n";
         report += "PHP Version: " + (fileData.phpVersion || "[Ej tillgänglig]") + "\n\n";
-
+        
         // Testlänkar och deras issues
         report += "---- Länkar till tester och Issues ----\n";
         const testGroups = document.querySelectorAll('.test-group');
         testGroups.forEach((group, index) => {
-          const linkValue = group.querySelector('.linkInput').value.trim();
+          let linkValue = group.querySelector('.linkInput').value.trim();
           if (linkValue !== "") {
             report += "\nTestlänk " + (index + 1) + ": " + linkValue + "\n";
             const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
             issueInputs.forEach((issue, j) => {
-              const issueText = issue.value.trim();
+              let issueText = issue.value.trim();
               if (issueText !== "") {
                 report += "   Issue " + (j + 1) + ": " + issueText + "\n";
               }
             });
           }
         });
-
-        // GitHub-status
+        
         report += "\n---- GitHub Status ----\n";
-        const githubStatus = document.getElementById('githubCheckbox').checked ? "Bumped on GitHub" : "Not bumped on GitHub";
+        let githubStatus = document.getElementById('githubCheckbox').checked ? "Bumped on GitHub" : "Not bumped on GitHub";
         report += githubStatus;
-
-        // Valda plugins (de checkboxar som är ikryssade)
-        report += "\n\n---- Valda Plugins ----\n";
-        const pluginCheckboxes = document.getElementsByClassName('pluginCheckbox');
-        for (let i = 0; i < pluginCheckboxes.length; i++) {
-          if (pluginCheckboxes[i].checked) {
-            report += pluginCheckboxes[i].value + "\n";
+        
+        // Samla och sortera utvalda plugins med branch
+        let selectedPlugins = [];
+        const pluginDivs = document.getElementById('pluginsContainer').children;
+        Array.from(pluginDivs).forEach(div => {
+          let checkbox = div.querySelector('.pluginCheckbox');
+          let branchInput = div.querySelector('.branchInput');
+          if (checkbox.checked) {
+            selectedPlugins.push({
+              plugin: checkbox.value,
+              branch: branchInput.value.trim()
+            });
           }
-        }
-
+        });
+        // Sortera så att plugins med "klarna" eller "krokedil" kommer först.
+        selectedPlugins.sort((a, b) => {
+          const regex = /(klarna|krokedil)/i;
+          let aPriority = regex.test(a.plugin) ? 0 : 1;
+          let bPriority = regex.test(b.plugin) ? 0 : 1;
+          if(aPriority === bPriority){
+            return a.plugin.localeCompare(b.plugin);
+          }
+          return aPriority - bPriority;
+        });
+        
+        report += "\n\n---- Valda Plugins & Branches ----\n";
+        selectedPlugins.forEach(item => {
+          let branchStr = item.branch ? " (Branch: " + item.branch + ")" : "";
+          report += item.plugin + branchStr + "\n";
+        });
+        
         return report;
       }
       
-      // Om en fil har laddats upp används dess innehåll
-      if (fileContent) {
-        const finalReport = generateReport(fileContent);
-        document.getElementById('generatedReport').value = finalReport;
-      } else {
-        // Om ingen fil laddats upp skapas en rapport utan systemdata
-        const finalReport = generateReport(null);
-        document.getElementById('generatedReport').value = finalReport;
-      }
+      let finalReport = generateReport();
+      document.getElementById('generatedReport').value = finalReport;
     });
   </script>
 </body>
