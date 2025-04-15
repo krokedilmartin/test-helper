@@ -61,34 +61,40 @@
         <div id="pluginsContainer"></div>
       </div>
       
-      <!-- Test Links with dynamic Issue fields -->
+      <!-- Test Links with dynamic Issue fields and custom rubrik -->
       <div class="mb-3">
         <h3>Test Links</h3>
         <div id="linksGroup">
-          <!-- 5 static test groups -->
+          <!-- 5 statiska testgrupper med fält för anpassad rubrik -->
           <div class="test-group">
-            <input type="text" placeholder="Test link 1" class="form-control linkInput" aria-label="Test link 1">
-            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <!-- Fält för anpassad rubrik -->
+            <input type="text" placeholder="Ange rubrik (t.ex. 'full test')" class="form-control testGroupTitle" aria-label="Anpassad rubrik för testlänk 1">
+            <input type="text" placeholder="Test link 1" class="form-control linkInput mt-2" aria-label="Test link 1">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="Lägg till issue">+</button>
             <div class="issuesContainer"></div>
           </div>
           <div class="test-group">
-            <input type="text" placeholder="Test link 2" class="form-control linkInput" aria-label="Test link 2">
-            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <input type="text" placeholder="Ange rubrik (t.ex. 'quick test leasing')" class="form-control testGroupTitle" aria-label="Anpassad rubrik för testlänk 2">
+            <input type="text" placeholder="Test link 2" class="form-control linkInput mt-2" aria-label="Test link 2">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="Lägg till issue">+</button>
             <div class="issuesContainer"></div>
           </div>
           <div class="test-group">
-            <input type="text" placeholder="Test link 3" class="form-control linkInput" aria-label="Test link 3">
-            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <input type="text" placeholder="Ange rubrik för testlänk 3" class="form-control testGroupTitle" aria-label="Anpassad rubrik för testlänk 3">
+            <input type="text" placeholder="Test link 3" class="form-control linkInput mt-2" aria-label="Test link 3">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="Lägg till issue">+</button>
             <div class="issuesContainer"></div>
           </div>
           <div class="test-group">
-            <input type="text" placeholder="Test link 4" class="form-control linkInput" aria-label="Test link 4">
-            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <input type="text" placeholder="Ange rubrik för testlänk 4" class="form-control testGroupTitle" aria-label="Anpassad rubrik för testlänk 4">
+            <input type="text" placeholder="Test link 4" class="form-control linkInput mt-2" aria-label="Test link 4">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="Lägg till issue">+</button>
             <div class="issuesContainer"></div>
           </div>
           <div class="test-group">
-            <input type="text" placeholder="Test link 5" class="form-control linkInput" aria-label="Test link 5">
-            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="add issue field">+</button>
+            <input type="text" placeholder="Ange rubrik för testlänk 5" class="form-control testGroupTitle" aria-label="Anpassad rubrik för testlänk 5">
+            <input type="text" placeholder="Test link 5" class="form-control linkInput mt-2" aria-label="Test link 5">
+            <button type="button" class="btn btn-secondary btn-sm mt-1 addIssueBtn" aria-label="Lägg till issue">+</button>
             <div class="issuesContainer"></div>
           </div>
         </div>
@@ -135,8 +141,13 @@
       const testGroups = document.querySelectorAll('.test-group');
       formData.testLinks = [];
       testGroups.forEach(group => {
+        const titleInput = group.querySelector('.testGroupTitle');
         const linkInput = group.querySelector('.linkInput');
-        let linkData = { link: linkInput.value, issues: [] };
+        let linkData = { 
+          title: titleInput ? titleInput.value : "", // Spara den anpassade rubriken
+          link: linkInput.value, 
+          issues: [] 
+        };
         const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
         issueInputs.forEach(issue => linkData.issues.push(issue.value));
         formData.testLinks.push(linkData);
@@ -164,6 +175,11 @@
           const testGroups = document.querySelectorAll('.test-group');
           formData.testLinks.forEach((item, index) => {
             if (testGroups[index]) {
+              // Ladda in den anpassade rubriken om den finns
+              const titleInput = testGroups[index].querySelector('.testGroupTitle');
+              if (titleInput) {
+                titleInput.value = item.title || "";
+              }
               testGroups[index].querySelector('.linkInput').value = item.link || "";
               const issuesContainer = testGroups[index].querySelector('.issuesContainer');
               issuesContainer.innerHTML = "";
@@ -327,7 +343,7 @@
       });
     });
     
-    // Generate report with the updated format
+    // Generate report with updated format – kontrollerar anpassad rubrik
     document.getElementById('generateReportBtn').addEventListener('click', function() {
       function generateReport() {
         let report = "---- Report ----\n";
@@ -344,7 +360,7 @@
             });
           }
         });
-        // Sort so that plugins with "klarna" or "krokedil" come first
+        // Sortera så att plugins med "klarna" eller "krokedil" kommer först
         selectedPlugins.sort((a, b) => {
           const regex = /(klarna|krokedil)/i;
           let aPriority = regex.test(a.plugin) ? 0 : 1;
@@ -362,13 +378,17 @@
         report += "WP Version: " + (fileData.wpVersion || "[Not available]") + "\n";
         report += "PHP Version: " + (fileData.phpVersion || "[Not available]") + "\n\n";
         
-        // Test links and issues
+        // Test links och issues
         report += "---- Test Links and Issues ----\n\n";
         const testGroups = document.querySelectorAll('.test-group');
         testGroups.forEach((group, index) => {
+          // Hämta eventuell anpassad rubrik
+          const titleInput = group.querySelector('.testGroupTitle');
+          const header = (titleInput && titleInput.value.trim() !== "") ? titleInput.value.trim() : "Test link " + (index + 1);
+          
           const linkValue = group.querySelector('.linkInput').value.trim();
           if (linkValue !== "") {
-            report += "Test link " + (index + 1) + ": " + linkValue + "\n";
+            report += header + ": " + linkValue + "\n";
             const issueInputs = group.querySelectorAll('.issuesContainer .issueInput');
             issueInputs.forEach((issue, j) => {
               const issueText = issue.value.trim();
@@ -379,7 +399,7 @@
           }
         });
         
-        // GitHub status
+        // GitHub-status
         if (document.getElementById('githubCheckbox').checked) {
           report += "\nBumped on GitHub";
         }
